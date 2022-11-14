@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>lotto</title>
+    <style>
+        .loading{width:300px; height:20px; background:#00000010; border-radius:10px; overflow: hidden;}
+        .loading span{display: block; width:0; height:20px; background:#007bc3;}
+    </style>
+</head>
+<body>
+    <button id="ajaxButton" type="button">XHR Test</button>
+
+    <div class="loading"><span></span></div>
+
+    <h3 id="testText"></h3>
+
+    <script>
+        let lotto = new Object();
+        let last = 0;
+        // let maxlength = 100;
+        let maxlength = 2;
+        let gauge = 0;
+        let getLotto = new Array();
+        let result = new Object();
+
+        (function () {
+            let httpRequest;
+            let httpRequestLast;
+            
+            document
+                .getElementById("ajaxButton") 
+                .addEventListener("click", makeRequestLast);
+
+
+            function makeRequest(param) {
+                httpRequest = new XMLHttpRequest();
+                if (!httpRequest) {
+                    console.log("XMLHttp 인스턴스를 만들 수 없어요");
+                    return false;
+                }
+                httpRequest.onreadystatechange = alertContents;
+                httpRequest.open("GET", `/lottos/${param}`, false);     // 동기 방식 설정
+                httpRequest.send();
+
+                console.log('param', param);
+            }
+
+            function alertContents() {
+                if (httpRequest.readyState === httpRequest.DONE) {
+                    if (httpRequest.status === 200) {
+                        let response = JSON.parse(httpRequest.responseText);
+                        let number = String(response.drwNo);      // key
+                        lotto[`${number}`] = response;            // push
+                    } else {
+                        console.log(`${httpRequest.status} 에러 request에 문제가 있어요`);
+                    }
+                }
+            }
+
+            
+
+
+
+
+
+
+                
+            function makeRequestLast() {
+                httpRequestLast = new XMLHttpRequest();
+                if (!httpRequestLast) {
+                    console.log("XMLHttp 인스턴스를 만들 수 없어요");
+                    return false;
+                }
+                httpRequestLast.onreadystatechange = alertContentsLast;
+                httpRequestLast.open("GET", `/lottos/last`);
+                httpRequestLast.send();
+            }
+
+            function alertContentsLast() {
+                // XHR 객체의 상태 확인
+                if (httpRequestLast.readyState === httpRequestLast.DONE) {
+                    // 정상적으로 처리된 응답인지 검사
+                    if (httpRequestLast.status === 200) {
+                        // document.getElementById("testText").innerHTML += httpRequest.responseText;
+
+                        let response = JSON.parse(httpRequestLast.responseText);
+                        
+                        last = String(response.drwNo);      // last number
+                        lotto[`${last}`] = response;
+
+                        let param = Number(last);
+                        console.log(param);
+                        // console.log('param', param);
+                        for(let i=param; i>=param-maxlength; i--){
+
+                            makeRequest(i);
+                            document.querySelector(".loading span").style.width = "50%";
+                            gauge++;
+
+                            console.log('gauge', gauge);
+                        }
+                        
+
+                        getNumber();
+
+
+                    } else {
+                        console.log(`${httpRequestLast.status} 에러 request에 문제가 있어요`);
+                    }
+                }
+            }
+
+
+            function getNumber(){
+
+                for (let value of Object.values(lotto)) {
+                    // console.log(value); // Violet과 30이 연속적으로 출력됨
+                    getLotto.push(value.drwtNo1);
+                    getLotto.push(value.drwtNo2);
+                    getLotto.push(value.drwtNo3);
+                    getLotto.push(value.drwtNo4);
+                    getLotto.push(value.drwtNo5);
+                    getLotto.push(value.drwtNo6);
+                    getLotto.push(value.bnusNo);
+                }
+
+                // getLotto = getLotto.sort((a,b)=>a-b);
+                getLotto.forEach((x) => {  result[x] = (result[x] || 0)+1; });
+                let sorted = Object.entries(result).sort((a, b) => b[1] - a[1]);
+
+                let resultHTML = ``;
+                for(let i=0; i<10; i++){
+                    let value = Object.values(sorted);
+                    resultHTML += `
+                        <p>추천 로또번호 ${i+1} : ${value[i][0]}<p>
+                    `;
+                }
+                document.getElementById("testText").innerHTML = resultHTML;
+            }
+
+
+        })();
+    </script>
+</body>
+</html>

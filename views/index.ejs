@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>lotto</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    
+    <style>
+        *{margin: 0; padding: 0;}
+        body{margin:2rem;}
+        #ajaxButton{border:1px solid #69c8f2; color:#69c8f2; border-radius:2px; padding: 10px 20px; background:#fff; font-weight: 700; transition:all .3s; cursor:pointer}
+        #ajaxButton:hover{background:#69c8f2; color:#fff; text-shadow: 0px 0px 3px rgb(0 49 70 / 80%);}
+        .lotto_num{display:flex; align-items: center; gap: 10px; padding:2rem 0 0;}
+        .lotto_num li{width: 60px; height: 60px; border-radius:60px; display:flex; align-items: center; justify-content: center; background:#69c8f2; text-shadow: 0px 0px 3px rgb(0 49 70 / 80%); font-size:1.25em; color:#fff; font-weight: 700;}
+    </style>
+</head>
+<body>
+    <button id="ajaxButton" type="button">로또 추천번호 받기</button>
+
+    <h3 id="testText">
+        <ul class="lotto_num"></ul>
+    </h3>
+
+    <script>
+        let reqLength = 100;          // 요청 갯수
+        let reqList = [];           // 요청이 담긴 배열
+        
+        let getLotto = new Array(); // 요청된 데이터가 담길 배열
+        let result = new Object();  // 결과가 담길 배열
+
+        (function () {
+            
+            document.getElementById("ajaxButton").addEventListener("click", requestLastLotto);
+
+            function requestLastLotto() {
+                axios.get(`/lottos/last`)
+                .then((response)=>{
+                    console.log(response);
+                    let useData = response.data;
+                    last = useData.drwNo;
+                    getLotto.push(useData);
+
+                    reqLength = last - reqLength;
+                    for(let i=last; i>reqLength; i--){
+                        reqList.push(axios.get(`/lottos/${i}`)) // axios 요청 배열 생성
+                    }
+                    requestLotto();
+
+                }).catch((err)=>{ console.log(err) })
+                .finally(()=>{ });
+            }
+
+
+            function requestLotto() {
+                axios.all( reqList )
+                .then((response)=>{
+                    response.forEach((item, index)=>{ getLotto.push(item.data) });
+                })
+                .then(()=>{
+                    console.log('완료', getLotto);
+                    getResult();
+                })
+                .catch((err)=>{ console.log(err) })
+                .finally(()=>{ });
+            }
+
+
+            function getResult(){
+
+                let getLottoNum = [];   // lotto 숫자만 담은 배열
+
+                getLotto.forEach((item, index)=>{
+                    getLottoNum.push(item.drwtNo1)
+                    getLottoNum.push(item.drwtNo2)
+                    getLottoNum.push(item.drwtNo3)
+                    getLottoNum.push(item.drwtNo4)
+                    getLottoNum.push(item.drwtNo5)
+                    getLottoNum.push(item.drwtNo6)
+                })
+
+                getLottoNum = getLottoNum.sort((a,b)=>a-b);
+                getLottoNum.forEach((x) => {  result[x] = ( result[x] || 0)+1; });
+                let sorted = Object.entries(result).sort((a, b) => b[1] - a[1]);
+
+                let resultHTML = ``;
+                for(let i=0; i<10; i++){
+                    let value = Object.values(sorted);
+                    resultHTML += `
+                        <li>${value[i][0]}</li>
+                    `;
+                }
+                document.querySelector("#testText .lotto_num").innerHTML = resultHTML;
+            }
+
+        })();
+    </script>
+</body>
+</html>
